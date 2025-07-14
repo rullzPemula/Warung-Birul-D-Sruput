@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Kasir Modern + Laporan + Profit</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1f1f2e;
+      color: #ffffff;
+      padding: 20px;
+    }
+    h2, h3 { color: #00d1b2; }
+
+    input, select {
+      padding: 8px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 150px;
+    }
+
+    button {
+      background-color: #00d1b2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background-color: #00b89c; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: #2a2a3d;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+    th { background-color: #33334d; }
+    tr:hover { background-color: #3c3c5e; }
+
+    .total {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 15px;
+      color: #f1c40f;
+    }
+
+    .section { margin-top: 30px; }
+    .card {
+      background-color: #2a2a3d;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🧾 Kasir Modern</h2>
+
+  <!-- Tambah Produk -->
+  <div class="section card">
+    <h3>➕ Tambah Produk</h3>
+    <input type="text" id="namaProduk" placeholder="Nama Produk">
+    <input type="number" id="hargaModal" placeholder="Modal (Rp)">
+    <input type="number" id="hargaJual" placeholder="Harga Jual (Rp)">
+    <input type="number" id="stokProduk" placeholder="Stok">
+    <button onclick="tambahProduk()">Tambah Produk</button>
+  </div>
+
+  <!-- Filter Produk -->
+  <div class="section card">
+    <h3>🔍 Filter Produk</h3>
+    <input type="text" id="filterProduk" placeholder="Cari produk..." oninput="renderProduk()">
+  </div>
+
+  <!-- Daftar Produk -->
+  <div class="section card">
+    <h3>📦 Daftar Produk</h3>
+    <table id="tabelProduk">
+      <tr>
+        <th>Nama</th>
+        <th>Modal</th>
+        <th>Harga</th>
+        <th>Stok</th>
+        <th>Aksi</th>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Keranjang -->
+  <div class="section card">
+    <h3>🛒 Keranjang Belanja</h3>
+    <table id="tabelKeranjang">
+      <tr>
+        <th>Nama</th>
+        <th>Harga</th>
+        <th>Qty</th>
+        <th>Subtotal</th>
+      </tr>
+    </table>
+    <div class="total">Total: Rp <span id="totalHarga">0</span></div>
+  </div>
+
+  <!-- Laporan -->
+  <div class="section card">
+    <h3>📈 Laporan Penjualan</h3>
+    <button onclick="tampilkanLaporan()">Lihat Laporan</button>
+    <div id="laporanText" style="margin-top:10px;"></div>
+  </div>
+
+  <script>
+    let produkList = [];
+    let keranjang = [];
+    let transaksi = [];
+
+    function tambahProduk() {
+      const nama = document.getElementById('namaProduk').value.trim();
+      const modal = parseInt(document.getElementById('hargaModal').value);
+      const harga = parseInt(document.getElementById('hargaJual').value);
+      const stok = parseInt(document.getElementById('stokProduk').value);
+      if (nama && modal >= 0 && harga > 0 && stok >= 0) {
+        produkList.push({ nama, harga, modal, stok });
+        renderProduk();
+        document.getElementById('namaProduk').value = '';
+        document.getElementById('hargaModal').value = '';
+        document.getElementById('hargaJual').value = '';
+        document.getElementById('stokProduk').value = '';
+      } else {
+        alert('Isi semua kolom dengan benar!');
+      }
+    }
+
+    function beli(index) {
+      let produk = produkList[index];
+      if (produk.stok > 0) {
+        produk.stok--;
+        let found = keranjang.find(item => item.nama === produk.nama);
+        if (found) {
+          found.qty++;
+        } else {
+          keranjang.push({ nama: produk.nama, harga: produk.harga, qty: 1 });
+        }
+        transaksi.push({
+          nama: produk.nama,
+          harga: produk.harga,
+          modal: produk.modal,
+          tanggal: new Date().toISOString().split('T')[0]
+        });
+        renderProduk();
+        renderKeranjang();
+      } else {
+        alert('Stok habis!');
+      }
+    }
+
+    function renderProduk() {
+      const tabel = document.getElementById('tabelProduk');
+      const filter = document.getElementById('filterProduk').value.toLowerCase();
+      tabel.innerHTML = `
+        <tr>
+          <th>Nama</th>
+          <th>Modal</th>
+          <th>Harga</th>
+          <th>Stok</th>
+          <th>Aksi</th>
+        </tr>
+      `;
+      produkList.forEach((item, index) => {
+        if (item.nama.toLowerCase().includes(filter)) {
+          tabel.innerHTML += `
+            <tr>
+              <td>${item.nama}</td>
+              <td>Rp ${item.modal}</td>
+              <td>Rp ${item.harga}</td>
+              <td>${item.stok}</td>
+              <td><button onclick="beli(${index})">TAMBAH</button></td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    function renderKeranjang() {
+      const tabel = document.getElementById('tabelKeranjang');
+      tabel.innerHTML = `
+        <tr>
+          <th>Nama</th>
+          <th>Harga</th>
+          <th>Qty</th>
+          <th>Subtotal</th>
+        </tr>
+      `;
+      let total = 0;
+      keranjang.forEach(item => {
+        const subtotal = item.harga * item.qty;
+        total += subtotal;
+        tabel.innerHTML += `
+          <tr>
+            <td>${item.nama}</td>
+            <td>Rp ${item.harga}</td>
+            <td>${item.qty}</td>
+            <td>Rp ${subtotal}</td>
+          </tr>
+        `;
+      });
+      document.getElementById('totalHarga').innerText = total;
+    }
+
+    function tampilkanLaporan() {
+      const today = new Date().toISOString().split('T')[0];
+      const thisWeek = getLast7Days();
+
+      let transaksiHariIni = transaksi.filter(t => t.tanggal === today);
+      let transaksiMingguan = transaksi.filter(t => thisWeek.includes(t.tanggal));
+
+      let totalHariIni = sum(transaksiHariIni, 'harga');
+      let modalHariIni = sum(transaksiHariIni, 'modal');
+      let profitHariIni = totalHariIni - modalHariIni;
+
+      let totalMingguan = sum(transaksiMingguan, 'harga');
+      let modalMingguan = sum(transaksiMingguan, 'modal');
+      let profitMingguan = totalMingguan - modalMingguan;
+
+      document.getElementById('laporanText').innerHTML = `
+        <b>🗓️ Hari Ini (${today})</b><br>
+        Total Penjualan: Rp ${totalHariIni}<br>
+        Total Modal: Rp ${modalHariIni}<br>
+        <span style="color:#00ff99">Profit: Rp ${profitHariIni}</span><br><br>
+
+        <b>📅 7 Hari Terakhir</b><br>
+        Total Penjualan: Rp ${totalMingguan}<br>
+        Total Modal: Rp ${modalMingguan}<br>
+        <span style="color:#00ff99">Profit: Rp ${profitMingguan}</span>
+      `;
+    }
+
+    function getLast7Days() {
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+      return days;
+    }
+
+    function sum(arr, key) {
+      return arr.reduce((acc, cur) => acc + (cur[key] || 0), 0);
+    }
+
+    // Inisialisasi awal
+    renderProduk();
+  </script>
+
+</body>
+</html>
